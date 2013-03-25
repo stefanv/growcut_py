@@ -55,6 +55,9 @@ def growcut(image, state, max_iter=500, window_size=5):
 
                 for jj in xrange(max(0, j - ws), min(j + ws + 1, width)):
                     for ii in xrange(max(0, i - ws), min(i + ws + 1, height)):
+                        if ii == i and jj == j:
+                            continue
+
                         # p -> current cell
                         # q -> attacker
                         C_q = image[ii, jj]
