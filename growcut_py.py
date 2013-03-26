@@ -52,10 +52,11 @@ def growcut(image, state, max_iter=500, window_size=5):
             for i in range(height):
                 C_p = image[i, j]
                 S_p = state[i, j]
+                changes_per_cell = 0
 
                 for jj in xrange(max(0, j - ws), min(j + ws + 1, width)):
                     for ii in xrange(max(0, i - ws), min(i + ws + 1, height)):
-                        if ii == i and jj == j:
+                        if (ii == i and jj == j) or (changes_per_cell != 0):
                             continue
 
                         # p -> current cell
@@ -66,11 +67,13 @@ def growcut(image, state, max_iter=500, window_size=5):
                         gc = g(C_q, C_p)
 
                         if gc * S_q[1] > S_p[1]:
-                            state_next[i, j, 0] = S_q[0]
                             state_next[i, j, 1] = gc * S_q[1]
 
-                            changes += 1
-                            break
+                            if S_p[0] != S_q[0]:
+                                state_next[i, j, 0] = S_q[0]
+                                changes += 1
+                                changes_per_cell += 1
+                                break
 
         state = state_next
 
