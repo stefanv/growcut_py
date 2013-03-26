@@ -1,4 +1,5 @@
 from growcut_py import growcut
+from growcut_py import growcut_fast
 
 import numpy as np
 import numpy.testing as npt
@@ -16,3 +17,6 @@ def test_growcut_basic():
 
     npt.assert_array_equal(image[..., 0],
                            growcut(image, state, window_size=3, max_iter=20))
+
+    npt.assert_array_equal(image[..., 0],
+                           growcut_fast(image, state, window_size=3, max_iter=20))
