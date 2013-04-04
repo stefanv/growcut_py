@@ -34,7 +34,7 @@ cdef double s3 = sqrt(3)
 
 
 cdef inline double g(double d) nogil:
-    return 1 - (d / s3) * (d / s3)
+    return 1 - (d / s3)
 
 
 def growcut(image, state,
@@ -85,8 +85,8 @@ def growcut(image, state,
         changes = 0
         n += 1
 
-        if n % 10 == 0:
-            print n
+        # if n % 10 == 0:
+        #     print n
 
 
         for j in range(width):
@@ -113,7 +113,11 @@ def growcut(image, state,
 
                                 changes += 1
                                 changes_per_cell += 1
+                                break
 
-        state_arr[:] = state_next_arr[:]
+        swap_state = state_next_arr
+        state_next_arr = state_arr
+        state_arr = swap_state
+        print n, changes
 
-    return np.asarray(state_arr[:, :, 0])
+    return np.asarray(state_next_arr[:, :, 0])

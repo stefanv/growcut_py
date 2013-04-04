@@ -4,10 +4,11 @@ import numpy as np
 from skimage import io, img_as_float
 from math import sqrt
 
+from numba import autojit, jit, float_, int_
 
 def g(x, y):
-    return 1 - np.sqrt(np.sum((x - y) ** 2)) / sqrt(3)
-
+    return 1 - np.linalg.norm(x-y,2)/sqrt(3)
+#    return 1 - np.sqrt(np.sum((x - y) ** 2)) / sqrt(3)
 
 def growcut(image, state, max_iter=500, window_size=5):
     """Grow-cut segmentation.
@@ -46,10 +47,9 @@ def growcut(image, state, max_iter=500, window_size=5):
         changes = 0
         n += 1
 
-        print n
-
         for j in range(width):
             for i in range(height):
+
                 C_p = image[i, j]
                 S_p = state[i, j]
                 changes_per_cell = 0
@@ -75,9 +75,9 @@ def growcut(image, state, max_iter=500, window_size=5):
                                 changes_per_cell += 1
                                 break
 
-        state = state_next
-
-    return state[:, :, 0]
+        state, state_next = state_next, state
+        print n, changes
+    return state_next[:, :, 0]
 
 
 if __name__ == "__main__":
