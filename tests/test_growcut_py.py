@@ -1,5 +1,5 @@
 from growcut_py import growcut
-from growcut_numba import growcut_numba
+from _growcut_numba import growcut as growcut_numba
 from _growcut import growcut as growcut_cython
 
 import numpy as np

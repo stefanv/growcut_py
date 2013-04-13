@@ -62,6 +62,8 @@ def kernel(image, state, state_next, window_radius):
                              window_ceil(j+1,width,window_radius)):
                 for ii in xrange(window_floor(i,window_radius),
                                  window_ceil(i+1,height,window_radius)):
+                    if (ii == i and jj == j):
+                        continue
 
                     gval = g(distance(image,i,j,ii,jj))
                     attack_strength = gval * state[ii,jj,1]

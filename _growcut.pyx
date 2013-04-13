@@ -91,11 +91,13 @@ def growcut(image, state,
 
         for j in range(width):
             for i in range(height):
-                changes_per_cell = 0
+
+                winning_colony = state_arr[i, j, 0]
+                defense_strength = state_arr[i, j, 1]
 
                 for jj in xrange(max(0, j - ws), min(j + ws + 1, width)):
                     for ii in xrange(max(0, i - ws), min(i + ws + 1, height)):
-                        if ii == i and jj == j or changes_per_cell > 0:
+                        if ii == i and jj == j:
                             continue
 
                         # p -> current cell, (i, j)
@@ -105,15 +107,13 @@ def growcut(image, state,
 
                         attack_strength = gc * state_arr[ii, jj, 1]
 
-                        if attack_strength > state_arr[i, j, 1]:
-                            state_next_arr[i, j, 1] = attack_strength
+                        if attack_strength > defense_strength:
+                            defense_strength = attack_strength
+                            winning_colony = state_arr[ii, jj, 0]
+                            changes += 1
 
-                            if state_arr[i, j, 0] != state_arr[ii, jj, 0]:
-                                state_next_arr[i, j, 0] = state_arr[ii, jj, 0]
-
-                                changes += 1
-                                changes_per_cell += 1
-                                break
+                state_next_arr[i, j, 0] = winning_colony
+                state_next_arr[i, j, 1] = defense_strength
 
         swap_state = state_next_arr
         state_next_arr = state_arr
