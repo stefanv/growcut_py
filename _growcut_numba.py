@@ -5,21 +5,30 @@ import numba
 from numba import jit, autojit, size_t
 import numpy as np
 import numpy.testing as npt
+from skimage import img_as_float
 
 SCALAR_DTYPE = np.float64
 # This doesn't work :(
 # SCALAR_TYPE  = numba.typeof(SCALAR_DTYPE)
 SCALAR_TYPE = numba.float64
 
-def window_floor(idx,size):
-    if size > idx: return 0
-    else         : return idx - size
+def window_floor(idx,radius):
+    if radius > idx : return 0
+    else            : return idx - radius
 
-def window_ceil(idx,ceil,size):
-    if idx + size > ceil: return ceil
-    else                : return idx + size
+def window_ceil(idx,ceil,radius):
+    if idx + radius > ceil : return ceil
+    else                   : return idx + radius
 
-def distance(pixel1, pixel2):
+def distance(image, r0, c0, r1, c1):
+    d = image[r0,c0,0] - image[r1,c1,0]
+    s = d * d
+    for i in range(1,3):
+        d = image[r0,c0,i] - image[r1,c1,i]
+        s += d * d
+    return math.sqrt(s)
+
+def pixel_distance(pixel1, pixel2):
     d = pixel1[0] - pixel2[0]
     s = d*d
     for i in range(1,3):
@@ -31,13 +40,13 @@ def np_distance(pixel1, pixel2):
     return np.linalg.norm(pixel1-pixel2,2)
 
 sqrt_3 = math.sqrt(3.0)
-def g(x,y):
-    return 1.0 - distance(x,y)/sqrt_3
+def g(d):
+    return 1.0 - d/sqrt_3
 
 def np_g(x,y):
     return 1.0 - np_distance(x,y)/sqrt_3
 
-def kernel(image, state, state_next, window_size):
+def kernel(image, state, state_next, window_radius):
     changes = 0
 
     height  = image.shape[0]
@@ -49,12 +58,12 @@ def kernel(image, state, state_next, window_size):
             winning_colony   = state[i,j,0]
             defense_strength = state[i,j,1]
 
-            for jj in xrange(window_floor(j,window_size),
-                             window_ceil(j+1,width,window_size)):
-                for ii in xrange(window_floor(i,window_size),
-                                 window_ceil(i+1,height,window_size)):
+            for jj in xrange(window_floor(j,window_radius),
+                             window_ceil(j+1,width,window_radius)):
+                for ii in xrange(window_floor(i,window_radius),
+                                 window_ceil(i+1,height,window_radius)):
 
-                    gval = g(image[i,j],image[ii,jj])
+                    gval = g(distance(image,i,j,ii,jj))
                     attack_strength = gval * state[ii,jj,1]
 
                     if attack_strength > defense_strength:
@@ -66,6 +75,48 @@ def kernel(image, state, state_next, window_size):
             state_next[i,j,1] = defense_strength
 
     return changes
+
+def growcut(image, state, max_iter=20, window_size=3):
+    """Grow-cut segmentation (Numba accelerated).
+
+    Parameters
+    ----------
+    image : (M, N) ndarray
+        Input image.
+    state : (M, N, 2) ndarray
+        Initial state, which stores (foreground/background, strength) for
+        each pixel position or automaton.  The strength represents the
+        certainty of the state (e.g., 1 is a hard seed value that remains
+        constant throughout segmentation).
+    max_iter : int, optional
+        The maximum number of automata iterations to allow.  The segmentation
+        may complete earlier if the state no longer varies.
+    window_size : int, optional
+        Size of the neighborhood window.
+
+    Returns
+    -------
+    mask : ndarray
+        Segmented image.  A value of zero indicates background, one foreground.
+   """
+
+    image = img_as_float(image)
+
+    window_radius = (window_size - 1) // 2
+
+    changes = 1
+    n = 0
+
+    state_next = np.empty_like(state)
+
+    while changes > 0 and n < max_iter:
+        changes = 0
+        n += 1
+        changes = kernel(image, state, state_next, window_radius)
+        state_next, state = state, state_next
+        print n, changes
+
+    return state_next[:, :, 0]
 
 def create_numba_funcs(scalar_type=SCALAR_TYPE):
     this = sys.modules[__name__]
@@ -82,25 +133,24 @@ def create_numba_funcs(scalar_type=SCALAR_TYPE):
                                      argtypes=[size_t,size_t,size_t],
                                      restype=size_t)(__py_window_ceil)
 
-    this.__numba_distance      = jit(inline=True,nopython=False,
-                                     argtypes=[pixel_type,pixel_type],
-                                     s=scalar_type,
-                                     d=scalar_type,
+    this.__numba_distance      = jit(inline=True,nopython=True,
+                                     argtypes=[image_type,
+                                               size_t,size_t,size_t,size_t],
                                      restype=scalar_type)(__py_distance)
 
     this.__numba_np_distance   = jit(inline=True,nopython=False,
                                      argtypes=[pixel_type,pixel_type],
                                      restype=scalar_type)(__py_np_distance)
 
-    this.__numba_g             = jit(inline=True,nopython=False,
-                                     argtypes=[pixel_type,pixel_type],
+    this.__numba_g             = jit(inline=True,nopython=True,
+                                     argtypes=[scalar_type],
                                      restype=scalar_type)(__py_g)
 
     this.__numba_np_g          = jit(inline=True,nopython=False,
                                      argtypes=[pixel_type,pixel_type],
                                      restype=scalar_type)(__py_np_g)
 
-    this.__numba_kernel = autojit(inline=True,nopython=False)(__py_kernel)
+    this.__numba_kernel = autojit(inline=True,nopython=True)(__py_kernel)
     # the below code does not work
     # this.__numba_kernel        = jit(nopython=False,
     #                                  argtypes=[image_type,
@@ -151,33 +201,34 @@ def test_window_floor_ceil():
     assert 5 == window_ceil(4,5,1)
 
 def test_distance():
+    image = np.zeros((2,2,3), dtype=SCALAR_DTYPE)
+    image[0,1] = [1, 1, 1]
+    image[1,0] = [0.5, 0.5, 0.5]
+
+    assert 0.0 == distance(image, 0, 0, 0, 0)
+    assert abs(math.sqrt(3) - distance(image, 0, 0, 0, 1)) < 1e-15
+    assert abs(math.sqrt(3/4) - distance(image, 0, 1, 1, 0)) < 1e-15
+
     pixel1 = np.asarray([0.0, 0.0, 0.0], dtype=SCALAR_DTYPE)
     pixel2 = np.asarray([1.0, 1.0, 1.0], dtype=SCALAR_DTYPE)
     pixel3 = np.asarray([0.5, 0.5, 0.5], dtype=SCALAR_DTYPE)
-    pixel_scalar = np.asarray(0.0, dtype=SCALAR_DTYPE)
-
-    pixel_type        = SCALAR_TYPE[:]
-    pixel_scalar_type = SCALAR_TYPE
-
-    assert 0.0 == distance(pixel1, pixel1)
-    assert abs(math.sqrt(3) - distance(pixel1, pixel2)) < 1e-15
-    assert abs(math.sqrt(3/4) - distance(pixel2, pixel3)) < 1e-15
 
     assert 0.0 == np_distance(pixel1, pixel1)
     assert abs(math.sqrt(3) - np_distance(pixel1, pixel2)) < 1e-15
     assert abs(math.sqrt(3/4) - np_distance(pixel2, pixel3)) < 1e-15
 
 def test_g():
+    image = np.zeros((2,2,3), dtype=SCALAR_DTYPE)
+    image[0,1] = [1, 1, 1]
+    image[1,0] = [0.5, 0.5, 0.5]
+
+    assert 1.0 == g(distance(image,0,0,0,0))
+    assert abs(0 - g(distance(image,0,0,0,1))) < 1e-15
+    assert abs(0.5 - g(distance(image,0,1,1,0))) < 1e-15
+
     pixel1 = np.asarray([0.0, 0.0, 0.0], dtype=SCALAR_DTYPE)
     pixel2 = np.asarray([1.0, 1.0, 1.0], dtype=SCALAR_DTYPE)
     pixel3 = np.asarray([0.5, 0.5, 0.5], dtype=SCALAR_DTYPE)
-
-    pixel_type        = SCALAR_TYPE[:]
-    pixel_scalar_type = SCALAR_TYPE
-
-    assert 1.0 == g(pixel1,pixel1)
-    assert abs(0 - g(pixel1,pixel2)) < 1e-15
-    assert abs(0.5 - g(pixel2,pixel3)) < 1e-15
 
     assert 1.0 == np_g(pixel1,pixel1)
     assert abs(0 - np_g(pixel1,pixel2)) < 1e-15
@@ -214,10 +265,12 @@ def test():
 # create numba versions of code
 create_numba_funcs()
 
+if __name__ == "__main__":
+    # always verify pure Python code first
+    test()
+    # then test optimized variants
+    optimize()
+    test()
+
 # replace default function calls with numba calls
 optimize()
-
-if __name__ == "__main__":
-    test()
-    debug()
-    test()
