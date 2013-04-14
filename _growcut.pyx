@@ -67,7 +67,7 @@ def growcut(image, state,
 
         Py_ssize_t i, j, ii, jj, width, height, ws, n, changes, changes_per_cell
         double[:] C_p, S_p, C_q, S_q
-        double gc, attack_strength
+        double gc, attack_strength, defense_strength, winning_colony
 
     image_arr = np.ascontiguousarray(img_as_float(image))
     state_arr = state
@@ -115,9 +115,7 @@ def growcut(image, state,
                 state_next_arr[i, j, 0] = winning_colony
                 state_next_arr[i, j, 1] = defense_strength
 
-        swap_state = state_next_arr
-        state_next_arr = state_arr
-        state_arr = swap_state
+        state_next_arr, state_arr = state_arr, state_next_arr
         print n, changes
 
     return np.asarray(state_next_arr[:, :, 0])

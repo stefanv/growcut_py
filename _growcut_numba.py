@@ -100,7 +100,8 @@ def growcut(image, state, max_iter=20, window_size=3):
     -------
     mask : ndarray
         Segmented image.  A value of zero indicates background, one foreground.
-   """
+
+    """
 
     image = img_as_float(image)
 
@@ -127,34 +128,34 @@ def create_numba_funcs(scalar_type=SCALAR_TYPE):
     image_type = scalar_type[:,:,:]
     state_type = scalar_type[:,:,:]
 
-    this.__numba_window_floor  = jit(inline=True,nopython=True,
+    this._numba_window_floor  = jit(inline=True,nopython=True,
                                      argtypes=[size_t,size_t],
-                                     restype=size_t)(__py_window_floor)
+                                     restype=size_t)(_py_window_floor)
 
-    this.__numba_window_ceil   = jit(inline=True,nopython=True,
+    this._numba_window_ceil   = jit(inline=True,nopython=True,
                                      argtypes=[size_t,size_t,size_t],
-                                     restype=size_t)(__py_window_ceil)
+                                     restype=size_t)(_py_window_ceil)
 
-    this.__numba_distance      = jit(inline=True,nopython=True,
+    this._numba_distance      = jit(inline=True,nopython=True,
                                      argtypes=[image_type,
                                                size_t,size_t,size_t,size_t],
-                                     restype=scalar_type)(__py_distance)
+                                     restype=scalar_type)(_py_distance)
 
-    this.__numba_np_distance   = jit(inline=True,nopython=False,
+    this._numba_np_distance   = jit(inline=True,nopython=False,
                                      argtypes=[pixel_type,pixel_type],
-                                     restype=scalar_type)(__py_np_distance)
+                                     restype=scalar_type)(_py_np_distance)
 
-    this.__numba_g             = jit(inline=True,nopython=True,
+    this._numba_g             = jit(inline=True,nopython=True,
                                      argtypes=[scalar_type],
-                                     restype=scalar_type)(__py_g)
+                                     restype=scalar_type)(_py_g)
 
-    this.__numba_np_g          = jit(inline=True,nopython=False,
+    this._numba_np_g          = jit(inline=True,nopython=False,
                                      argtypes=[pixel_type,pixel_type],
-                                     restype=scalar_type)(__py_np_g)
+                                     restype=scalar_type)(_py_np_g)
 
-    this.__numba_kernel = autojit(inline=True,nopython=True)(__py_kernel)
+    this._numba_kernel = autojit(inline=True,nopython=True)(_py_kernel)
     # the below code does not work
-    # this.__numba_kernel        = jit(nopython=False,
+    # this._numba_kernel        = jit(nopython=False,
     #                                  argtypes=[image_type,
     #                                            state_type,
     #                                            state_type,
@@ -162,37 +163,37 @@ def create_numba_funcs(scalar_type=SCALAR_TYPE):
     #                                  restype=int_,
     #                                  attack_strength=scalar_type,
     #                                  defense_strength=scalar_type,
-    #                                  winning_colony=scalar_type)(__py_kernel)
+    #                                  winning_colony=scalar_type)(_py_kernel)
 
 
 def debug():
     this = sys.modules[__name__]
-    this.window_floor = __py_window_floor
-    this.window_ceil  = __py_window_ceil
-    this.distance     = __py_distance
-    this.np_distance  = __py_np_distance
-    this.g            = __py_g
-    this.np_g         = __py_np_g
-    this.kernel       = __py_kernel
+    this.window_floor = _py_window_floor
+    this.window_ceil  = _py_window_ceil
+    this.distance     = _py_distance
+    this.np_distance  = _py_np_distance
+    this.g            = _py_g
+    this.np_g         = _py_np_g
+    this.kernel       = _py_kernel
 
 def optimize():
     this = sys.modules[__name__]
-    this.window_floor = __numba_window_floor
-    this.window_ceil  = __numba_window_ceil
-    this.distance     = __numba_distance
-    this.np_distance  = __numba_np_distance
-    this.g            = __numba_g
-    this.np_g         = __numba_np_g
-    this.kernel       = __numba_kernel
+    this.window_floor = _numba_window_floor
+    this.window_ceil  = _numba_window_ceil
+    this.distance     = _numba_distance
+    this.np_distance  = _numba_np_distance
+    this.g            = _numba_g
+    this.np_g         = _numba_np_g
+    this.kernel       = _numba_kernel
 
 # protected Pythonic versions of code:
-__py_window_floor  = window_floor
-__py_window_ceil   = window_ceil
-__py_distance      = distance
-__py_np_distance   = np_distance
-__py_g             = g
-__py_np_g          = np_g
-__py_kernel        = kernel
+_py_window_floor  = window_floor
+_py_window_ceil   = window_ceil
+_py_distance      = distance
+_py_np_distance   = np_distance
+_py_g             = g
+_py_np_g          = np_g
+_py_kernel        = kernel
 
 def test_window_floor_ceil():
 
