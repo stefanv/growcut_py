@@ -6,8 +6,10 @@ from math import sqrt
 
 from numba import autojit, jit, float_, int_
 
+
 def g(x, y):
-    return 1 - np.linalg.norm(x-y,2)/sqrt(3)
+    return 1 - np.linalg.norm(x-y, 2)/sqrt(3)
+
 
 def growcut(image, state, max_iter=500, window_size=5):
     """Grow-cut segmentation.
@@ -72,8 +74,8 @@ def growcut(image, state, max_iter=500, window_size=5):
                             winning_colony = S_q[1]
                             changes += 1
 
-                state_next[i,j,0] = winning_colony
-                state_next[i,j,1] = defense_strength
+                state_next[i, j, 0] = winning_colony
+                state_next[i, j, 1] = defense_strength
 
         state, state_next = state_next, state
         print n, changes
