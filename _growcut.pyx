@@ -34,7 +34,7 @@ cdef double s3 = sqrt(3)
 
 
 cdef inline double g(double d) nogil:
-    return 1 - (d / s3) * (d / s3)
+    return 1 - (d / s3)
 
 
 def growcut(image, state,
@@ -67,7 +67,7 @@ def growcut(image, state,
 
         Py_ssize_t i, j, ii, jj, width, height, ws, n, changes, changes_per_cell
         double[:] C_p, S_p, C_q, S_q
-        double gc, attack_strength
+        double gc, attack_strength, defense_strength, winning_colony
 
     image_arr = np.ascontiguousarray(img_as_float(image))
     state_arr = state
@@ -85,17 +85,19 @@ def growcut(image, state,
         changes = 0
         n += 1
 
-        if n % 10 == 0:
-            print n
+        # if n % 10 == 0:
+        #     print n
 
 
         for j in range(width):
             for i in range(height):
-                changes_per_cell = 0
+
+                winning_colony = state_arr[i, j, 0]
+                defense_strength = state_arr[i, j, 1]
 
                 for jj in xrange(max(0, j - ws), min(j + ws + 1, width)):
                     for ii in xrange(max(0, i - ws), min(i + ws + 1, height)):
-                        if ii == i and jj == j or changes_per_cell > 0:
+                        if ii == i and jj == j:
                             continue
 
                         # p -> current cell, (i, j)
@@ -105,15 +107,15 @@ def growcut(image, state,
 
                         attack_strength = gc * state_arr[ii, jj, 1]
 
-                        if attack_strength > state_arr[i, j, 1]:
-                            state_next_arr[i, j, 1] = attack_strength
+                        if attack_strength > defense_strength:
+                            defense_strength = attack_strength
+                            winning_colony = state_arr[ii, jj, 0]
+                            changes += 1
 
-                            if state_arr[i, j, 0] != state_arr[ii, jj, 0]:
-                                state_next_arr[i, j, 0] = state_arr[ii, jj, 0]
+                state_next_arr[i, j, 0] = winning_colony
+                state_next_arr[i, j, 1] = defense_strength
 
-                                changes += 1
-                                changes_per_cell += 1
+        state_next_arr, state_arr = state_arr, state_next_arr
+        print n, changes
 
-        state_arr[:] = state_next_arr[:]
-
-    return np.asarray(state_arr[:, :, 0])
+    return np.asarray(state_next_arr[:, :, 0])
