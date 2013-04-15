@@ -79,7 +79,13 @@ def kernel(image, state, state_next, window_radius):
                     if (ii == i and jj == j):
                         continue
 
-                    gval = g(distance(image, i, j, ii, jj))
+                    d = image[i, j, 0] - image[ii, jj, 0]
+                    s = d * d
+                    for k in range(1, 3):
+                        d = image[i, j, k] - image[ii, jj, k]
+                        s += d * d
+                    gval = 1.0 - s/sqrt_3
+
                     attack_strength = gval * state[ii, jj, 1]
 
                     if attack_strength > defense_strength:
