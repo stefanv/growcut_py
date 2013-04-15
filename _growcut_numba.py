@@ -150,32 +150,32 @@ def create_numba_funcs(scalar_type=SCALAR_TYPE):
     image_type = scalar_type[:, :, :]
     state_type = scalar_type[:, :, :]
 
-    this._numba_window_floor = jit(inline=True, nopython=True,
+    this._numba_window_floor = jit(nopython=True,
                                    argtypes=[size_t, size_t],
                                    restype=size_t)(_py_window_floor)
 
-    this._numba_window_ceil = jit(inline=True, nopython=True,
+    this._numba_window_ceil = jit(nopython=True,
                                   argtypes=[size_t, size_t, size_t],
                                   restype=size_t)(_py_window_ceil)
 
-    this._numba_distance = jit(inline=True, nopython=True,
+    this._numba_distance = jit(nopython=True,
                                argtypes=[image_type,
                                          size_t, size_t, size_t, size_t],
                                restype=scalar_type)(_py_distance)
 
-    this._numba_np_distance = jit(inline=True, nopython=False,
+    this._numba_np_distance = jit(nopython=False,
                                   argtypes=[pixel_type, pixel_type],
                                   restype=scalar_type)(_py_np_distance)
 
-    this._numba_g = jit(inline=True, nopython=True,
+    this._numba_g = jit(nopython=True,
                         argtypes=[scalar_type],
                         restype=scalar_type)(_py_g)
 
-    this._numba_np_g = jit(inline=True, nopython=False,
+    this._numba_np_g = jit(nopython=False,
                            argtypes=[pixel_type, pixel_type],
                            restype=scalar_type)(_py_np_g)
 
-    this._numba_kernel = autojit(inline=True, nopython=True)(_py_kernel)
+    this._numba_kernel = autojit(nopython=True)(_py_kernel)
     # the below code does not work
     # this._numba_kernel        = jit(nopython=False,
     #                                  argtypes=[image_type,
