@@ -61,6 +61,12 @@ def growcut(image, state,
     mask : ndarray
         Segmented image.  A value of zero indicates background, one foreground.
 
+    Reference
+    ---------
+    .. [1] V. Vezhnevets, V. Konouchine. "Grow-Cut - Interactive Multi-Label
+           N-D Image Segmentation".  In Proceedings of the 2005 Conference,
+           Graphicon. Pages 150-156.
+
     """
     cdef:
         double[:, :, ::1] state_arr, state_next_arr, image_arr
